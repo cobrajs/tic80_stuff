@@ -51,6 +51,7 @@ addPipe(38,{{x=1},{x=-1}},PIPE_NORMAL)
 addPipe(40,{{y=1},{y=-1}},PIPE_NORMAL)
 addPipe(42,{{x=1},{x=-1},{y=1},{y=-1}},PIPE_JUNCTION)
 addPipe(44,{{x=-1},{y=-1},{x=1},{y=1}},PIPE_JUNCTION)
+addPipe(46,{{x=-1},{y=1},{x=1},{y=-1}},PIPE_JUNCTION)
 addPipe(68,{{x=-1},{y=-1}},PIPE_NORMAL)
 addPipe(70,{{x=-1},{y=1}},PIPE_NORMAL)
 addPipe(72,{{x=1},{y=-1}},PIPE_NORMAL)
@@ -78,7 +79,8 @@ function makeGrid(w,h)
 	 for iw=1,w do
    table.insert(row,{
 				type=1,x=iw,y=ih,
-				filled=0,next=nil})
+				filled=0,next=nil,
+   fillA=0,fillB=0})
 		end
 		table.insert(grid,row)
 	end
@@ -116,18 +118,24 @@ function partialFill(x,y,cell)
  if cell.filled>=1 then
   if p.t==PIPE_JUNCTION then
    if p.s==42 then
-    if cell.fillA==1 then
-     rect(x,y+4,16,8,5)
-    elseif cell.fillB==1 then
-     rect(x,y,16,4,5)
-     rect(x,y+16,16,4,5)
-    end
+    local fillA,fillB=15,15
+    if cell.fillA==1 then fillA=5 end
+    if cell.fillB==1 then fillB=5 end
+    rect(x,y+4,16,8,fillA)
+    rect(x,y,16,4,fillB)
+    rect(x,y+12,16,4,fillB)
    elseif p.s==44 then
-    if cell.fillA==1 then
-     tri(x,y,x+15,y,x,y+15,5)
-    elseif cell.fillB==1 then
-     tri(x+16,y+16,x+16,y,x,y+16,5)
-    end
+    local fillA,fillB=15,15
+    if cell.fillA==1 then fillA=5 end
+    if cell.fillB==1 then fillB=5 end
+    tri(x+16,y+16,x+16,y,x,y+16,fillA)
+    tri(x,y,x+15,y,x,y+15,fillB)
+   elseif p.s==46 then
+    local fillA,fillB=15,15
+    if cell.fillA==1 then fillA=5 end
+    if cell.fillB==1 then fillB=5 end
+    tri(x,y,x+15,y,x+15,y+15,fillA)
+    tri(x,y,x,y+16,x+16,y+16,fillB)
    end
   else
    rect(x,y,16,16,5)
@@ -198,7 +206,7 @@ function canReceive(pipe,dir)
    return true
   end
  elseif p.t==PIPE_JUNCTION then
-  if matchDir(dir,p.d[1]) or matchDir(p.d[2]) or matchDir(p.d[3]) or matchDir(p.d[4]) then
+  if matchDir(dir,p.d[1]) or matchDir(dir,p.d[2]) or matchDir(dir,p.d[3]) or matchDir(dir,p.d[4]) then
    return true
   end
  end
@@ -232,9 +240,9 @@ function nextPipe()
   p=PIPES[state.cell.type]
   if p.t==PIPE_JUNCTION then
    if matchDir(dir,p.d[1]) or matchDir(dir,p.d[2]) then
-    nextCell.fillA=1
+    state.cell.fillA=1
    else
-    nextCell.fillB=1
+    state.cell.fillB=1
    end
   end
  end
@@ -246,10 +254,8 @@ makeGrid(7,5)
 updatePipeQueue()
 
 
---[[
-grid[3][2].type=PIPE_STARTS[math.random(1,#PIPE_STARTS)].i
---]]
-grid[3][2].type=PIPE_STARTS[math.random(1,#PIPE_STARTS)].i
+--grid[3][2].type=PIPE_STARTS[math.random(1,#PIPE_STARTS)].i
+grid[3][2].type=6
 state.cell=grid[3][2]
 state.dir={x=1,y=0}
 
@@ -293,6 +299,11 @@ function TIC()
   end
  end
 
+ --Discard pipes for debug
+ if btnp(6) then
+  takePipe()
+ end
+
  --Preview
  for y,pipe in ipairs(pipes_next) do
   spr(PIPES[pipe].s,
@@ -331,8 +342,10 @@ end
 -- 041:fffeccccfffeddd7fffeddd7fffeddd7fffeddd7fffeddd7fffeddd7fffeddd7
 -- 042:cccc0fffcddd0fffcddd0fffcddd0fff00000000ffffffffffffffffffffffff
 -- 043:fffeccccfffeddd7fffeddd7fffeddd700000000ffffffffffffffffffffffff
--- 044:cccc0fffcddd0fffcdddffffcddfffff00fffffffffffffffffffffffffffffe
+-- 044:cccc0fffcddd0fffcdd0ffffcd0fffff00fffffffffffffffffffffffffffffe
 -- 045:fffeccccfffeddd7fffeddd7ffedddd7ffed0000fe00ffffe0ffffff0fffffff
+-- 046:cccc0fffcddd0fffcddd0fffcdddd0ff0000deffffff00efffffff0efffffff0
+-- 047:fffeccccfffeddd7ffffedd7fffffed7ffffff00ffffffffffffffffefffffff
 -- 050:7ddddddd7ddddddd7ddddddd7ddddddd7ddddddd7ddddddd7ddddddd7ccccccc
 -- 051:dddddddcdddddddcdddddddcdddddddcdddddddcdddddddcdddddddccccccccc
 -- 052:cdddddddcdddddddcdddddddcdddddddcdddddddcdddddddcdddddddc7777777
@@ -344,7 +357,9 @@ end
 -- 058:ffffffffffffffffffffffffeeeeeeeecddd0fffcddd0fffcddd0fffc7770fff
 -- 059:ffffffffffffffffffffffffeeeeeeeefffeddd7fffeddd7fffeddd7fffe7777
 -- 060:ffffffe0fffffe0ffffee0ffeeedd0ffcddd0fffcddd0fffcddd0fffc7770fff
--- 061:ffffffffffffffffffffffffffffffeefffffdd7ffffddd7fffeddd7fffe7777
+-- 061:fffffffffffffffffffffffffffffeeeffffedd7fffeddd7fffeddd7fffe7777
+-- 062:ffffffffffffffffffffffffeeefffffcddeffffcddd0fffcddd0fffc7770fff
+-- 063:0efffffff0efffffff0eefffffeddeeefffeddd7fffeddd7fffeddd7fffe7777
 -- 068:cccc0fffcddd0fffcddd0fffcddd0fff0000ffffffffffffffffffffffffffff
 -- 069:fffeccccfffeddd7fffeddd7fffeddd7fffeddd7fffeddd7fffeddd7fffeddd7
 -- 070:cccccccccdddddddcdddddddcddddddd00000000ffffffffffffffffffffffff
