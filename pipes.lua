@@ -88,6 +88,9 @@ function makeGrid(w,h)
 end
 
 function getGrid(x,y)
+ if x<1 or y<1 or x>grid.w or y>grid.h then
+  return nil
+ end
  return grid[y][x]
 end
 
@@ -232,7 +235,7 @@ function nextPipe()
   end
  end
  local nextCell=getGrid(c.x+dir.x,c.y+dir.y)
- if not canReceive(nextCell,dir) then
+ if nextCell==nil or not canReceive(nextCell,dir) then
   state.cell=nil
   return
  end
